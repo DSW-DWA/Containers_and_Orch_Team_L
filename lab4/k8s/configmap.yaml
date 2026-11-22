@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: counter-config
+  labels:
+    app.kubernetes.io/name: counter
+    app.kubernetes.io/part-of: lab4-counter
+data:
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  APP_TITLE: "Kubernetes visit counter"
+  BOOT_MARKER: /work/redis-ready
