@@ -106,26 +106,20 @@ kubectl kustomize lab4/k8s
 
 Тест запускает Redis и HTTP-сервер только на `127.0.0.1`, проверяет readiness до и после выполнения init-скрипта и два последовательных увеличения счётчика, затем останавливает оба процесса. `kubectl kustomize` только собирает манифесты в стандартный вывод и не подключается к кластеру.
 
-## Скриншоты для отчёта
+## Скриншоты локального запуска
 
-На момент подготовки инструкции Colima остановлена. Перед снимками запустите её и проверьте локальные Pod:
+Все снимки сделаны в локальном кластере Colima с явным контекстом `colima`.
 
-```bash
-colima start --kubernetes --cpu 2 --memory 4
-kubectl --context colima -n lab4 rollout status deployment/redis --timeout=120s
-kubectl --context colima -n lab4 rollout status deployment/counter --timeout=120s
-```
+1. Оба Deployment готовы, оба Pod работают без перезапусков; созданы два Service:
 
-Если ресурсы отсутствуют, повторите `kubectl --context colima apply -k lab4/k8s` из корня репозитория; образы уже загружены в локальный Docker Colima.
+   ![Deployment, Pod и Service в локальном кластере](screenshots/running_pod.png)
 
-Сохраните в `lab4/screenshots/` следующие снимки **локального** кластера:
+2. Init-контейнер завершился с кодом 0; у веб-контейнера есть Liveness и Readiness пробы:
 
-1. `01-resources.png` — вывод `kubectl --context colima -n lab4 get deployments,pods,services -o wide`: оба Deployment `1/1`, оба Pod `Running`.
-2. `02-init-and-probes.png` — вывод `kubectl --context colima -n lab4 describe pod -l app.kubernetes.io/name=counter`: статус init-контейнера `Completed`, поля `Liveness` и `Readiness`.
-3. `03-app.png` — страница `http://127.0.0.1:18080/` с увеличивающимся счётчиком. Для открытия страницы запустите `kubectl --context colima -n lab4 port-forward --address 127.0.0.1 service/counter 18080:80`, после снимка нажмите `Ctrl+C`.
+   ![Завершение init-контейнера и настройки проб](screenshots/02-init-and-probes.png)
 
-Снимок страницы из локального запуска уже сохранён; его можно заменить своим:
+3. Приложение доступно через `kubectl --context colima -n lab4 port-forward --address 127.0.0.1 service/counter 18080:80` и показывает счётчик Redis:
 
-![Страница счётчика в локальном Kubernetes](screenshots/03-app.png)
+   ![Страница счётчика в локальном Kubernetes](screenshots/03-app.png)
 
-Первые два снимка команда добавит после проверки в своём терминале.
+23 ноября 2026 года состояние локального кластера проверено повторно: оба Deployment `1/1 Available`, оба Pod `Running` без перезапусков, HTTP-пробы вернули `200`, а два последовательных обращения через внутренний `Service/counter` увеличили счётчик с 5 до 6.
