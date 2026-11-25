@@ -1,0 +1,9 @@
+# Intentionally bad practices for comparison; the application still works.
+FROM python:latest
+
+WORKDIR /app
+COPY . .
+
+# No USER: the application runs as root.
+EXPOSE 8080
+CMD python -u server.py
