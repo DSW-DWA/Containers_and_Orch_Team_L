@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: counter
+  labels:
+    app.kubernetes.io/name: counter
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: lab4-counter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: counter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: counter
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/part-of: lab4-counter
+    spec:
+      securityContext:
+        fsGroup: 10001
+      initContainers:
+        - name: wait-for-redis
+          image: lab4-counter:1.0.0
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-u", "wait_for_redis.py"]
+          envFrom:
+            - configMapRef:
+                name: counter-config
+          volumeMounts:
+            - name: init-state
+              mountPath: /work
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+      containers:
+        - name: counter
+          image: lab4-counter:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: counter-config
+          volumeMounts:
+            - name: init-state
+              mountPath: /work
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+      volumes:
+        - name: init-state
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: counter
+  labels:
+    app.kubernetes.io/name: counter
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: lab4-counter
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: counter
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
